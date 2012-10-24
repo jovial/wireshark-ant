@@ -1,0 +1,60 @@
+Files:
+
+Makefile	- an abortion. Please send me a patch :)
+hrm.c		- ANT+ HRM receiver
+hrmx.c		- ANT+ HRM transmitter
+libant.c 	- ANT library
+libant.h	- Header files for library and apps
+pm.c		- ANT+ power meter receiver
+qx2.c		- Transmits qollector power meter data
+bike.c		- ANT+ GSC10 receiver (wheel circumference hard coded)
+foo.c, foo2.c	- ANT network key test programs (ignore these)
+packet-ant.[ch]	- Wireshark USB ANT dissectors
+wireshark-patch	- Patch to wireshark to insert packet-ant.[ch]
+iant		- Script to install ANT plugin to wireshark (modify it).
+		- see below
+
+All of it is work in progress...
+
+libant uses 2 threads: reader() and writer() to transfer data between
+queues that are written and read by the application.
+
+TODO
+
+Add a mainloop and call back mechanism
+Add burst transfers
+lots more...
+
+CHECKOUT:
+
+$ git clone git://e2c3.com/nant.git for public read-only
+$ git clone git@e2c3.com:nant for r/w access
+
+WIRESHARK plugin:
+
+The wireshark plugin is used to decode USB ANT traffic
+which either uses a native program in linux, or an
+ANT program within a vm such as in vmware. This program
+could be a windows program. When the ANT program is
+running (natively or within a VM), wireshark -ki usbmon3 -R ant
+would decode all ANT traffic on that bus.
+lsusb will show which bus the ANT (dynastream) stick is attached to.
+
+To get wireshark working in linux, check out the latest
+wireshark svn sources:
+
+svn co http://anonsvn.wireshark.org/wireshark/trunk/ wireshark
+
+checkout the latest sources from my nant repository. Edit the
+iant script with the location of the pristine source directory
+for wireshark and where you want the build copy to go.
+./iant
+that will copy the files into the plugins directory and build
+it. You'll probably have to delete the original wireshark
+binary and plugins in order not to interfere with them.
+
+After that is done, you just need to cd to the plugins/ant
+directory and do a make install whenever you edit the
+dissector.
+
+# vim: se sw=8 ts=8:

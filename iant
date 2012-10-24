@@ -1,0 +1,18 @@
+#!/bin/sh
+# Run this from nant git source directory as ./iant
+ORIGWS=/home/will/code/wireshark # SVN sources of wireshark checked out here
+BUILDWS=/tmp/wsbuild	# where to build it
+rm -rf $BUILDWS
+cp -r $ORIGWS $BUILDWS
+mkdir $BUILDWS/plugins/ant
+cp 0001-make-file.patch $BUILDWS
+cp {packet-ant.[ch],moduleinfo.h,Makefile.am,Makefile.common} $BUILDWS/plugins/ant
+# hack, replace gryphon plugin with ant plugin
+perl -pni.bak -e 's/gryphon/ant/g' $BUILDWS/{configure.in,Makefile.am,plugins/Makefile.am,configure.ac,epan/Makefile.am}
+cd $BUILDWS
+#patch -p1 < 0001-make-file.patch
+sh autogen.sh
+./configure && make && su -c "make install"
+# for just plugins
+# cd plugins
+# make && su -c "make install"

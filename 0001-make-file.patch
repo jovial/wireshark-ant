@@ -1,0 +1,32 @@
+From 84c9f1f3cae797c9830c9e79140c338d3e286f29 Mon Sep 17 00:00:00 2001
+From: Will Szumski <will@cowboycoders.org>
+Date: Wed, 12 Sep 2012 22:52:49 +0100
+Subject: [PATCH] make file
+
+---
+ epan/dissectors/Makefile.common |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/epan/dissectors/Makefile.common b/epan/dissectors/Makefile.common
+index 4f889fd..85437ab 100644
+--- a/epan/dissectors/Makefile.common
++++ b/epan/dissectors/Makefile.common
+@@ -1178,6 +1178,7 @@ DISSECTOR_SRC = \
+ 	packet-zep.c		\
+ 	packet-ziop.c		\
+ 	packet-zrtp.c	\
++    packet-ant.c \
+ 	$(CUSTOM_DISSECTOR_SRC)
+ 
+ #
+@@ -1558,6 +1559,7 @@ DISSECTOR_INCLUDES =	\
+ 	packet-zep.h	\
+ 	packet-ziop.h	\
+ 	rpc_defrag.h	\
++	packet-ant.h \
+ 	$(GENERATED_HEADER_FILES) \
+ 	$(CUSTOM_HEADER_FILES)
+ 
+-- 
+1.7.7.6
+
