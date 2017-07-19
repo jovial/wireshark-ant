@@ -468,9 +468,9 @@ get_ant_infop(packet_info *pinfo)
 			conversation = conversation_new(pinfo->fd->num, &pinfo->src, &pinfo->dst,
 			pinfo->ptype, pinfo->srcport,pinfo->destport, 0);
 	}
-	ant_infop = conversation_get_proto_data(conversation, proto_ant);
+	ant_infop = (struct ant_info *) conversation_get_proto_data(conversation, proto_ant);
 	if (!ant_infop) {
-		ant_infop = se_alloc(sizeof(struct ant_info));
+		ant_infop = (struct ant_info *) wmem_alloc0(wmem_epan_scope(), (sizeof(struct ant_info)));
 		for (i = 0; i < MAXCHAN; i++) {
 			ant_infop->first[i] = 1;
 		}
@@ -485,7 +485,7 @@ new_pdata(struct ant_info *ant_infop, guint8 chan)
 {
 	struct pkt_data *p_data;
 
-	p_data = se_alloc(sizeof(struct pkt_data));
+	p_data = (struct pkt_data *) wmem_alloc0(wmem_epan_scope(), (sizeof(struct pkt_data)));
 	p_data->first = ant_infop->first[chan];
 	p_data->devtype = ant_infop->devtype[chan];
 	/* copy should depend on devtype, but should get away with it */
