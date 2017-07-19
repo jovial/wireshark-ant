@@ -868,7 +868,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				p_data->meta.burst.seq_id = ant_infop->last.burst.seq_id[burst_chan];
 				p_data->meta.burst.islast = burst_last;
 				p_data->meta.burst.burst_seq = ant_infop->last.burst.burst_seq[burst_chan] = burst_seq;
-				p_add_proto_data(pinfo->fd, proto_ant, p_data);
+				p_add_proto_data(wmem_file_scope(), pinfo, proto_ant, 0, p_data);
 				if (burst_last) {
 					//fprintf(stderr, "burst %d %d %d\n", burst_seq, burst_chan, burst_last);
 					ant_infop->last.burst.seq[burst_chan] = 0;
@@ -985,7 +985,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				p_data = new_pdata(ant_infop, chan);
 				if (MESG_EXT_BROADCAST_DATA_ID == msgid)
 					p_data->devtype = tvb_get_guint8(tvb, DEVTYPE_OFFSET);
-				p_add_proto_data(pinfo->fd, proto_ant, p_data);
+				p_add_proto_data(wmem_file_scope(), pinfo, proto_ant, 0, p_data);
 			}
 			page = tvb_get_guint8(tvb, offset);
 			if (p_data->devtype == DEVTYPE_HRM) {
