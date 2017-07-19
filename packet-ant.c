@@ -16,6 +16,7 @@
 
 #include <epan/packet.h>
 #include <epan/prefs.h>
+#include <epan/proto_data.h>
 
 #include <epan/reassemble.h>
 
@@ -517,7 +518,7 @@ dissect_burst(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	int val;
 
 	if (tree) {
-		p_data = p_get_proto_data(pinfo->fd, proto_ant);
+		p_data = (struct pkt_data *) p_get_proto_data(wmem_file_scope(), pinfo, proto_ant, 0);
 		//fprintf(stderr, "pdata %p\n", p_data);
 		page = tvb_get_guint8(tvb, offset);
 		ANTITEM(tree, hf_ant_pd_page, 1);
@@ -858,7 +859,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			burst_last = tvb_get_guint8(tvb, offset) & (1 << 7);
 			burst_seq = (tvb_get_guint8(tvb, offset) & (3 << 5)) >> 5;
 			burst_chan = tvb_get_guint8(tvb, offset) & 31;
-			p_data = p_get_proto_data(pinfo->fd, proto_ant);
+			p_data = (struct pkt_data *) p_get_proto_data(wmem_file_scope(), pinfo, proto_ant, 0);
 			ant_infop = 0;
 			if (!p_data) {
 				ant_infop = get_ant_infop(pinfo);
@@ -977,7 +978,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				ext = EXT_ADD;
 			} else
 				ext = 0;
-			p_data = p_get_proto_data(pinfo->fd, proto_ant);
+			p_data = (struct pkt_data *) p_get_proto_data(wmem_file_scope(), pinfo, proto_ant, 0);
 			ant_infop = 0;
 			if (!p_data) {
 				ant_infop = get_ant_infop(pinfo);
