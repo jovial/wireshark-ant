@@ -508,8 +508,8 @@ new_pdata(struct ant_info *ant_infop, guint8 chan)
 
 static int
 dissect_burst(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
-{
-	struct pkt_data *p_data;
+{	   
+	//struct pkt_data *p_data;
 	int offset;
 	guint8 phase;
 	guint8 page;
@@ -518,7 +518,8 @@ dissect_burst(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	int val;
 
 	if (tree) {
-		p_data = (struct pkt_data *) p_get_proto_data(wmem_file_scope(), pinfo, proto_ant, 0);
+		//p_data = (struct pkt_data *) p_get_proto_data(wmem_file_scope(), pinfo, proto_ant, 0);
+		p_get_proto_data(wmem_file_scope(), pinfo, proto_ant, 0);
 		//fprintf(stderr, "pdata %p\n", p_data);
 		page = tvb_get_guint8(tvb, offset);
 		ANTITEM(tree, hf_ant_pd_page, 1);
