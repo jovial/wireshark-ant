@@ -450,8 +450,8 @@ static void
 msg_init_protocol(void)
 {
 	fprintf(stderr, "msginit\n");
-	fragment_table_init(&msg_fragment_table);
-	reassembled_table_init(&msg_reassembled_table);
+	reassembly_table_init(&ip_reassembly_table, 
+	                      &addresses_reassembly_table_functions);
 }
 
 
@@ -879,8 +879,8 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			ANTITEM(dtree, hf_ant_bm_burst_chan, 1);
 			save_fragmented = pinfo->fragmented;
 			pinfo->fragmented = 1;
-			frag_msg = fragment_add_seq_check(tvb, offset, pinfo, p_data->meta.burst.seq_id,
-				msg_fragment_table, msg_reassembled_table, p_data->meta.burst.seq,
+			frag_msg = fragment_add_seq_check(&ip_reassembly_table, tvb, offset,
+			    pinfo, p_data->meta.burst.seq_id, NULL, p_data->meta.burst.seq,
 				MIN(8, tvb_length_remaining(tvb, offset)-1), burst_last?0:1);
 			//fprintf(stderr, "frag %p seq %d last %d seq %d\n", frag_msg, p_data->meta.burst.seq, burst_last?1:0, p_data->meta.burst.seq_id);
 			//fprintf(stderr, "burst rem %d %d\n", tvb_length_remaining(tvb, offset)-1, MIN(8,tvb_length_remaining(tvb, offset)-1));
