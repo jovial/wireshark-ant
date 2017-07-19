@@ -542,7 +542,7 @@ dissect_burst(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				ANTITEM(tree, hf_ant_ub, 1);
 				ANTITEM(tree, hf_ant_ub, 1);
 				ANTITEM(tree, hf_ant_unitid, 4);
-				if (tvb_length_remaining(tvb, offset)) {
+				if (tvb_captured_length_remaining(tvb, offset)) {
 					ANTITEM(tree, hf_ant_unitname, 16);
 				}
 				break;
@@ -882,9 +882,9 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			pinfo->fragmented = 1;
 			frag_msg = fragment_add_seq_check(&ip_reassembly_table, tvb, offset,
 			    pinfo, p_data->meta.burst.seq_id, NULL, p_data->meta.burst.seq,
-				MIN(8, tvb_length_remaining(tvb, offset)-1), burst_last?0:1);
+				MIN(8, tvb_captured_length_remaining(tvb, offset)-1), burst_last?0:1);
 			//fprintf(stderr, "frag %p seq %d last %d seq %d\n", frag_msg, p_data->meta.burst.seq, burst_last?1:0, p_data->meta.burst.seq_id);
-			//fprintf(stderr, "burst rem %d %d\n", tvb_length_remaining(tvb, offset)-1, MIN(8,tvb_length_remaining(tvb, offset)-1));
+			//fprintf(stderr, "burst rem %d %d\n", tvb_captured_length_remaining(tvb, offset)-1, MIN(8,tvb_captured_length_remaining(tvb, offset)-1));
 			new_tvb = process_reassembled_data(tvb, offset, pinfo, "reassembled burst", frag_msg,
 				&msg_frag_items, NULL, dtree);
 			ANTITEM(dtree, hf_ant_data_data, len-1);
@@ -1266,11 +1266,11 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	/* ANTITEM(ant_tree, hf_ant_checksum, 1);  TODO - validate */
 	/* See if another ANT message got stuck on the end */
 	/* TODO: do this like (with?) tcp_dissect_pdus() */
-	for (i = 0; i < tvb_length_remaining(tvb, offset); i++) {
+	for (i = 0; i < tvb_captured_length_remaining(tvb, offset); i++) {
 		if (MESG_TX_SYNC == tvb_get_guint8(tvb, offset+i)) {
 			memcpy(&cpinfo, pinfo, sizeof cpinfo);
 			return dissect_ant(
-				tvb_new_subset(tvb, offset+i, tvb_length_remaining(tvb, offset)-i, tvb_length_remaining(tvb, offset)-i),
+				tvb_new_subset(tvb, offset+i, tvb_captured_length_remaining(tvb, offset)-i, tvb_captured_length_remaining(tvb, offset)-i),
 				&cpinfo, tree);
 		}
 	}
