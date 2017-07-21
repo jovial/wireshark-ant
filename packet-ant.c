@@ -3,7 +3,7 @@
  * Released under GPLv3
  */
 #ifdef HAVE_CONFIG_H
-# include "config.h"
+#include "config.h"
 #endif
 
 #include <stdio.h>
@@ -319,6 +319,15 @@ static int hf_ant_cad = -1;
 static int hf_ant_hr = -1;
 static int hf_ant_auth_len = -1;
 
+/* Generated from convert_proto_tree_add_text.pl */
+static int hf_ant_network_key = -1;
+static int hf_ant_network_str = -1;
+static int hf_ant_r_r_time = -1;
+static int hf_ant_r1_r2 = -1;
+static int hf_ant_nm = -1;
+static int hf_ant_rpm = -1;
+static int hf_ant_watts = -1;
+
 
 /* TODO tfs_enabled_disabled in tfs.h */
 static const true_false_string tfs_enabled = {
@@ -510,7 +519,7 @@ static int
 dissect_burst(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {	   
 	//struct pkt_data *p_data;
-	int offset;
+	int offset = 0;
 	guint8 phase;
 	guint8 page;
 	guint8 flag;
@@ -721,12 +730,12 @@ dissect_burst(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 }
 
 static int
-dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
+dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
 	int offset;
 	int len;
 	int msgid;
-	int rmsg;
+	//int rmsg;
 	guint16 newrr;
 	guint8 newseq;
 	guint8 newr1;
@@ -758,9 +767,8 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	guint8 cmd;
 	guint8 phase;
 	guint8 burst_last, burst_seq, burst_chan;
-	fragment_data *frag_msg;
-	tvbuff_t *new_tvb, *next_tvb;
-	proto_tree *msg_tree;
+	fragment_head *frag_msg;
+	tvbuff_t *new_tvb;
 	gboolean save_fragmented = FALSE;
 	proto_item *antdata_item = NULL;
 	proto_item *ti;
@@ -778,22 +786,20 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	 * tvb len = len + header + trailer, though would miss packets with trailing nulls
 	 */
 
-	if (tvb_length(tvb) < ANT_MIN_LEN) {
+	if (tvb_captured_length(tvb) < ANT_MIN_LEN) {
 		return 0;
 	}
 	if (MESG_TX_SYNC != tvb_get_guint8(tvb, 0)) {
-		fprintf(stderr, "not sync len %d isfrag %d\n", tvb_length(tvb), pinfo->fragmented);
+		fprintf(stderr, "not sync len %d isfrag %d\n", tvb_captured_length(tvb), pinfo->fragmented);
 		return 0;
 	}
 
 	len = tvb_get_guint8(tvb, LEN_OFFSET);
 	msgid = tvb_get_guint8(tvb, MSGID_OFFSET);
 
-	if (check_col(pinfo->cinfo, COL_PROTOCOL))
-		col_set_str(pinfo->cinfo, COL_PROTOCOL, "ANT");
+	col_set_str(pinfo->cinfo, COL_PROTOCOL, "ANT");
 
-	if (check_col(pinfo->cinfo, COL_INFO))
-		col_set_str(pinfo->cinfo, COL_INFO, "ANT Message");
+	col_set_str(pinfo->cinfo, COL_INFO, "ANT Message");
 
 	offset = 0;
 	if (tree) {
@@ -801,7 +807,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		ti = proto_tree_add_item(tree, proto_ant, tvb, 0, -1, TRUE);
 
 		ant_tree = proto_item_add_subtree(ti, ett_ant);
-		msg_tree = proto_item_add_subtree(dtree, ett_msg_fragments);
+		//msg_tree = proto_item_add_subtree(dtree, ett_msg_fragments);
 	}
 
 	ANTITEM(ant_tree, hf_ant_sync, 1);
@@ -898,10 +904,10 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			}
 			if (new_tvb) {
 				//fprintf(stderr, "new size %d\n", tvb_reported_length_remaining(new_tvb, 0));
-				next_tvb = new_tvb;
+				//next_tvb = new_tvb;
 				dissect_burst(new_tvb, pinfo, dtree);
 			} else {
-				next_tvb = tvb_new_subset(tvb, offset, -1, -1);
+				//next_tvb = tvb_new_subset_remaining(tvb, offset);
 			}
 			pinfo->fragmented = save_fragmented;
 			/*
@@ -955,13 +961,13 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				netstr = "(ANT+)";
 				break;
 			}
-			proto_tree_add_text(dtree, tvb, offset, 8, "Network key: %" G_GINT64_MODIFIER "x %s",
-				netkey, netstr);
+			proto_tree_add_item(dtree, hf_ant_network_key, tvb, offset, 8, ENC_LITTLE_ENDIAN);
+                        proto_tree_add_string(dtree, hf_ant_network_str, tvb, offset, 0, netstr);
 			offset+= 8;
 			break;
 		case MESG_RESPONSE_EVENT_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
-			rmsg = tvb_get_guint8(tvb, RMSG_OFFSET); /* special case == 1 */
+			//rmsg = tvb_get_guint8(tvb, RMSG_OFFSET); /* special case == 1 */
 			ANTITEM(dtree, hf_ant_data_msgid, 1);
 			ANTITEM(dtree, hf_ant_data_msgcode, 1);
 			break;
@@ -1000,8 +1006,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 					ant_infop->first[chan] = 0;
 				}
 				if (p_data->last.hr.seq != newseq && !p_data->first) {
-					proto_tree_add_text(dtree, tvb, offset, 2, "R-R time: %d was %d, diff %d, R-R HR %.1f",
-						newrr, p_data->last.hr.rr, newrr-p_data->last.hr.rr, 60.0*1024.0/(newrr-p_data->last.hr.rr));
+					proto_tree_add_item(dtree, hf_ant_r_r_time, tvb, offset, 2, ENC_LITTLE_ENDIAN);
 				} else {
 					NANTITEM(dtree, hf_ant_pd_rr, 2);
 				}
@@ -1012,8 +1017,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				ANTITEM(dtree, hf_ant_pd_hr, 1);
 				ANTITEM(dtree, hf_ant_pd_seq, 1);
 				newrr = tvb_get_letohs(tvb, SUU_RR_OFFSET+ext);
-				proto_tree_add_text(dtree, tvb, offset, 2, "R-R time: %d was %d, diff %d, R-R HR %.1f",
-					newrr, p_data->last.hr.rr, newrr-p_data->last.hr.rr, 60.0*1024.0/(newrr-p_data->last.hr.rr));
+				proto_tree_add_item(dtree, hf_ant_r1_r2, tvb, offset, 2, ENC_LITTLE_ENDIAN);
 				ANTITEM(dtree, hf_ant_pd_newrr, 2);
 				ANTITEM(dtree, hf_ant_pd_oldrr, 2);
 				ANTITEM(dtree, hf_ant_pd_prevrr, 2);
@@ -1051,9 +1055,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 						nm = tdiff/(rdiff*32.0);
 						rpm = rdiff*122880.0/pdiff;
 						watts = rpm*nm*2*M_PI/60;
-						proto_tree_add_text(dtree, tvb, offset, 2, "r1 %d %d r2 %d %d n %d %d p %d %d t %d %d",
-							newr1, p_data->last.power.r1, newr2, p_data->last.power.r2, newn, p_data->last.power.n,
-							newp, p_data->last.power.p, newt, p_data->last.power.t);
+						proto_tree_add_item(dtree, hf_ant_nm, tvb, offset, 1, nm);
 
 						proto_tree_add_uint_format_value(dtree, hf_ant_r1, tvb, offset, 1, hf_ant_r1,
 							"%d (old %d diff %d)", newr1, p_data->last.power.r1, rdiff);
@@ -1065,9 +1067,8 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 							"%d (old %d diff %d)", newp, p_data->last.power.p, pdiff);
 						proto_tree_add_uint_format_value(dtree, hf_ant_t, tvb, offset, 2, hf_ant_t,
 							"%d (old %d diff %d)", newt, p_data->last.power.t, tdiff);
-						proto_tree_add_text(dtree, tvb, offset, 1, "Nm: %.2f (tdiff/(rdiff*32)", nm);
-						proto_tree_add_text(dtree, tvb, offset, 1, "RPM: %.2f (rdiff*122880/pdiff)", rpm);
-						proto_tree_add_text(dtree, tvb, offset, 1, "Watts: %.2f (rpm*nm*2pi/60)", watts);
+						proto_tree_add_float(dtree, hf_ant_rpm, tvb, offset, 1, rpm);
+						proto_tree_add_float(dtree, hf_ant_watts, tvb, offset, 1, watts);
 					} else {
 						ANTITEM(dtree, hf_ant_r1, 1);
 						ANTITEM(dtree, hf_ant_r2, 1);
@@ -1271,8 +1272,8 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		if (MESG_TX_SYNC == tvb_get_guint8(tvb, offset+i)) {
 			memcpy(&cpinfo, pinfo, sizeof cpinfo);
 			return dissect_ant(
-				tvb_new_subset(tvb, offset+i, tvb_captured_length_remaining(tvb, offset)-i, tvb_captured_length_remaining(tvb, offset)-i),
-				&cpinfo, tree);
+				tvb_new_subset_length_caplen(tvb, offset+i, tvb_captured_length_remaining(tvb, offset)-i, tvb_captured_length_remaining(tvb, offset)-i),
+				&cpinfo, tree, NULL);
 		}
 	}
 
@@ -1283,7 +1284,6 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 void
 proto_register_ant(void)
 {
-	module_t *ant_module;
 
 	static hf_register_info hf[] = {
 
@@ -1794,6 +1794,16 @@ proto_register_ant(void)
 		{ &hf_ant_pref2f7,
 			{ "Prefs2 bit 7", "ant.pref2f7", FT_BOOLEAN, 8, NULL, 1 << 7, NULL, HFILL }
 		},
+                { &hf_ant_network_str,
+                    { "Network","ant.network", FT_STRING, BASE_NONE, NULL, 0, "", HFILL }
+                },
+	      /* Generated from convert_proto_tree_add_text.pl */
+      { &hf_ant_network_key, { "Network key", "ant.network_key", FT_UINT64, BASE_DEC, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_r_r_time, { "R-R time", "ant.r_r_time", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_r1_r2, { "r1 %d %d r2 %d %d n %d %d p %d %d t %d %d", "ant.r1_r2", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_nm, { "Nm", "ant.nm", FT_FLOAT, BASE_NONE, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_rpm, { "RPM", "ant.rpm", FT_FLOAT, BASE_NONE, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_watts, { "Watts", "ant.watts", FT_FLOAT, BASE_NONE, NULL, 0x0, NULL, HFILL }},
 	};
 
 	static gint *ett[] = {
@@ -1808,7 +1818,7 @@ proto_register_ant(void)
 	proto_register_field_array(proto_ant, hf, array_length(hf));
 	proto_register_subtree_array(ett, array_length(ett));
 
-	ant_module = prefs_register_protocol(proto_ant,
+	prefs_register_protocol(proto_ant,
 	    proto_reg_handoff_ant);
 }
 
@@ -1819,10 +1829,10 @@ proto_reg_handoff_ant(void)
 	static dissector_handle_t ant_handle;
 
 	if (!initialised) {
-		ant_handle = new_create_dissector_handle(dissect_ant,
+		ant_handle = create_dissector_handle(dissect_ant,
 								 proto_ant);
-		dissector_add("usb.bulk", 0xffff, ant_handle);
-		dissector_add("usb.bulk", 0xff, ant_handle);
+		dissector_add_uint("usb.bulk", 0xffff, ant_handle);
+		dissector_add_uint("usb.bulk", 0xff, ant_handle);
 
 		//msg_init_protocol();
 		register_init_routine(msg_init_protocol);
