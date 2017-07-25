@@ -794,6 +794,13 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 	}
 
 	len = tvb_get_guint8(tvb, LEN_OFFSET);
+
+    // check for out of bounds checksum
+    if (tvb_captured_length(tvb) <= (guint)(CHAN_OFFSET + len) + 1) {
+        fprintf(stderr, "checksum out of bounds, captured len: %u, reported len: %u \n", tvb_captured_length(tvb), len);
+        return 0;
+    }
+
 	msgid = tvb_get_guint8(tvb, MSGID_OFFSET);
 
 	col_set_str(pinfo->cinfo, COL_PROTOCOL, "ANT");
@@ -1260,7 +1267,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 	cksum = 0;
 	for (i = 0; i < offset; i++)
 		cksum ^= tvb_get_guint8(tvb, i);
-	val = tvb_get_guint8(tvb, offset);
+    val = tvb_get_guint8(tvb, CHAN_OFFSET + len);
 	if (cksum == val)
 		proto_tree_add_uint_format_value(dtree, hf_ant_checksum, tvb, offset, 1, val, "%02x (correct ck %02x)", val, cksum);
 	else
