@@ -179,6 +179,7 @@ static int hf_ant_data_maxchan = -1;
 static int hf_ant_data_maxnet = -1;
 static int hf_ant_data_srchto = -1;
 static int hf_ant_data_freq = -1;
+static int hf_ant_version = -1;
 
 static int hf_ant_bm_no_rx_chans = -1;
 static int hf_ant_bm_no_tx_chans = -1;
@@ -420,6 +421,15 @@ static const value_string msgs[] = {
 	{0x1, "Channel event"},
 	{0x3d, "Suunto config"},
 	{MESG_RESPONSE_EVENT_ID, "Response event"},
+    {MESG_CONFIG_LIST_ID, "Configure exclusion/inclusion list"},
+    {MESG_ANT_VERSION_ID, "Ant version"},
+    {MESG_START_UP_ID, "start up"},
+    {MESG_SERIAL_ERROR_ID, "serial error notification"},
+    {MESG_LOW_PRIORITY_TIMEOUT_ID, "low priority timeout"},
+    {MESG_PROXIMITY_SEARCH_ID, "config proximity search"},
+    {MESG_CHANNEL_SEARCH_PRIORITY_ID, "channel search priority"},
+    {MESG_LIB_CONFIG_ID, "lib config"},
+    {MESG_ADD_ENCRYPTION_ID_ID, "add encryption id"},
 	{MESG_UNASSIGN_CHANNEL_ID, "Unassign channel" },
 	{MESG_ASSIGN_CHANNEL_ID, "Assign channel" },
 	{MESG_CHANNEL_MESG_PERIOD_ID, "Message period" },
@@ -733,7 +743,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
 	int offset;
 	int len;
-	int msgid;
+    guint8 msgid;
 	//int rmsg;
 	guint16 newrr;
 	guint8 newseq;
@@ -796,7 +806,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 	len = tvb_get_guint8(tvb, LEN_OFFSET);
 
     // check for out of bounds checksum
-    if (tvb_captured_length(tvb) <= (guint)(CHAN_OFFSET + len) + 1) {
+    if (tvb_captured_length(tvb) <= (guint)(CHAN_OFFSET + len)) {
         fprintf(stderr, "checksum out of bounds, captured len: %u, reported len: %u \n", tvb_captured_length(tvb), len);
         return 0;
     }
@@ -805,7 +815,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 
 	col_set_str(pinfo->cinfo, COL_PROTOCOL, "ANT");
 
-	col_set_str(pinfo->cinfo, COL_INFO, "ANT Message");
+    col_set_str(pinfo->cinfo, COL_INFO, val_to_str(msgid, msgs, "unknown msg id: %02x"));
 
 	offset = 0;
 	if (tree) {
@@ -827,7 +837,30 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 			dtree = proto_item_add_subtree(antdata_item, ett_ant_data);
 		}
 		switch (msgid) {
-		case MESG_CAPABILITIES_ID:
+        case MESG_CONFIG_LIST_ID:
+            break;
+        case MESG_UNASSIGN_CHANNEL_ID:
+            break;
+        case MESG_OPEN_CHANNEL_ID:
+            break;
+        case MESG_ANT_VERSION_ID:
+            NANTITEM(dtree, hf_ant_version, -1);
+            break;
+        case MESG_START_UP_ID:
+            break;
+        case MESG_SERIAL_ERROR_ID:
+            break;
+        case MESG_LOW_PRIORITY_TIMEOUT_ID:
+            break;
+        case MESG_PROXIMITY_SEARCH_ID:
+            break;
+        case MESG_CHANNEL_SEARCH_PRIORITY_ID:
+            break;
+        case MESG_LIB_CONFIG_ID:
+            break;
+        case MESG_ADD_ENCRYPTION_ID_ID:
+            break;
+        case MESG_CAPABILITIES_ID:
 			ANTITEM(dtree, hf_ant_data_maxchan, 1);
 			ANTITEM(dtree, hf_ant_data_maxnet, 1);
 
@@ -853,22 +886,22 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 				ANTITEM(dtree, hf_ant_bm_ext_assign, 1);
 			}
 			break;
-		case MESG_ASSIGN_CHANNEL_ID:
+        case MESG_ASSIGN_CHANNEL_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			ANTITEM(dtree, hf_ant_data_chtype, 1);
 			ANTITEM(dtree, hf_ant_data_net, 1);
 			break;
-		case MESG_CHANNEL_SEARCH_TIMEOUT_ID:
+        case MESG_CHANNEL_SEARCH_TIMEOUT_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			val = tvb_get_guint8(tvb, offset);
 			proto_tree_add_uint_format_value(dtree, hf_ant_data_srchto, tvb, offset, 1, val, "%d (%.1f secs)", val, val*2.5); offset++;
 			break;
-		case MESG_CHANNEL_RADIO_FREQ_ID:
+        case MESG_CHANNEL_RADIO_FREQ_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			val = tvb_get_guint8(tvb, offset);
 			proto_tree_add_uint_format_value(dtree, hf_ant_data_freq, tvb, offset, 1, val, "%d (%dMHz)", val, 2400+val); offset++;
 			break;
-		case MESG_BURST_DATA_ID:
+        case MESG_BURST_DATA_ID:
 			burst_last = tvb_get_guint8(tvb, offset) & (1 << 7);
 			burst_seq = (tvb_get_guint8(tvb, offset) & (3 << 5)) >> 5;
 			burst_chan = tvb_get_guint8(tvb, offset) & 31;
@@ -922,7 +955,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 			}
 			*/
 			break;
-		case MESG_CHANNEL_ID_ID:
+        case MESG_CHANNEL_ID_ID:
 			chan = tvb_get_guint8(tvb, CHAN_OFFSET);
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			ANTITEM(dtree, hf_ant_data_devno, 2);
@@ -931,25 +964,25 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 			ANTITEM(dtree, hf_ant_data_devtype, 1);
 			ANTITEM(dtree, hf_ant_data_transtype, 1);
 			break;
-		case MESG_SEARCH_WAVEFORM_ID:
+        case MESG_SEARCH_WAVEFORM_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1)
 			ANTITEM(dtree, hf_ant_data_waveform, 2);
 			break;
-		case MESG_CHANNEL_MESG_PERIOD_ID:
+        case MESG_CHANNEL_MESG_PERIOD_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			val = tvb_get_letohs(tvb, PERIOD_OFFSET);
 			proto_tree_add_uint_format_value(dtree, hf_ant_data_period, tvb, offset, 2,
 				val, "%d (%.2fHz)", val, 32768.0/val); offset += 2;
 			break;
-		case MESG_REQUEST_ID:
+        case MESG_REQUEST_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			ANTITEM(dtree, hf_ant_data_msgid, 1);
 			break;
-		case MESG_CHANNEL_STATUS_ID:
+        case MESG_CHANNEL_STATUS_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			ANTITEM(dtree, hf_ant_data_chanstat, 1);
 			break;
-		case MESG_NETWORK_KEY_ID:
+        case MESG_NETWORK_KEY_ID:
 			ANTITEM(dtree, hf_ant_data_net, 1);
 			netkey = tvb_get_ntoh64(tvb, offset);
 			if ((netkey & ANTP_MASK) == ANTP_MASK)
@@ -971,17 +1004,17 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
             proto_tree_add_string(dtree, hf_ant_network_str, tvb, offset, 0, netstr);
 			offset+= 8;
 			break;
-		case MESG_RESPONSE_EVENT_ID:
+        case MESG_RESPONSE_EVENT_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			//rmsg = tvb_get_guint8(tvb, RMSG_OFFSET); /* special case == 1 */
 			ANTITEM(dtree, hf_ant_data_msgid, 1);
 			ANTITEM(dtree, hf_ant_data_msgcode, 1);
 			break;
-		case MESG_SYSTEM_RESET_ID:
+        case MESG_SYSTEM_RESET_ID:
 			ANTITEM(dtree, hf_ant_data_mbz, 1);
 			break;
 		case MESG_BROADCAST_DATA_ID:
-		case MESG_EXT_BROADCAST_DATA_ID:
+        case MESG_EXT_BROADCAST_DATA_ID:
 			chan = tvb_get_guint8(tvb, CHAN_OFFSET);
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			if (MESG_EXT_BROADCAST_DATA_ID == msgid) {
@@ -1227,7 +1260,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 				ANTITEM(dtree, hf_ant_data_data, len-1-ext);
 			}
 			break;
-		case MESG_ACKNOWLEDGED_DATA_ID:
+        case MESG_ACKNOWLEDGED_DATA_ID:
 			ANTITEM(dtree, hf_ant_data_chan, 1);
 			ANTITEM(dtree, hf_ant_pd_page, 1);
 			cmd = tvb_get_guint8(tvb, offset);
@@ -1804,9 +1837,12 @@ proto_register_ant(void)
 		{ &hf_ant_pref2f7,
 			{ "Prefs2 bit 7", "ant.pref2f7", FT_BOOLEAN, 8, NULL, 1 << 7, NULL, HFILL }
 		},
-                { &hf_ant_network_str,
-                    { "Network","ant.network", FT_STRING, BASE_NONE, NULL, 0, "", HFILL }
-                },
+        { &hf_ant_network_str,
+            { "Network","ant.network", FT_STRING, BASE_NONE, NULL, 0, NULL, HFILL }
+        },
+        { &hf_ant_version,
+            { "Version","ant.version", FT_STRINGZ, STR_ASCII, NULL, 0, NULL, HFILL }
+        },
 	      /* Generated from convert_proto_tree_add_text.pl */
       { &hf_ant_network_key, { "Network key", "ant.network_key", FT_UINT64, BASE_HEX, NULL, 0, NULL, HFILL }},
       { &hf_ant_r_r_time, { "R-R time", "ant.r_r_time", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
