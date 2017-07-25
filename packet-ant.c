@@ -2,9 +2,8 @@
  * Copyright 2009 `date +paul@ant%m%y.sbrk.co.uk`
  * Released under GPLv3
  */
-#ifdef HAVE_CONFIG_H
+
 #include "config.h"
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -748,16 +747,16 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 	char *netstr;
 	guint16 val;
 	guint8 page;
-	float batt;
+    double batt;
 	struct ant_info *ant_infop;
 	struct pkt_data *p_data;
 	guint8 rdiff;
 	guint8 ndiff;
 	guint16 pdiff;
 	guint16 tdiff;
-	float nm;
-	float rpm;
-	float watts;
+    double nm;
+    double rpm;
+    double watts;
 	guint8 ext;
 	guint16 newwheeltime, diffwheeltime;
 	guint16 newcranktime, diffcranktime;
@@ -961,8 +960,8 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 				netstr = "(ANT+)";
 				break;
 			}
-			proto_tree_add_item(dtree, hf_ant_network_key, tvb, offset, 8, ENC_LITTLE_ENDIAN);
-                        proto_tree_add_string(dtree, hf_ant_network_str, tvb, offset, 0, netstr);
+            proto_tree_add_item(dtree, hf_ant_network_key, tvb, offset, 8, ENC_BIG_ENDIAN);
+            proto_tree_add_string(dtree, hf_ant_network_str, tvb, offset, 0, netstr);
 			offset+= 8;
 			break;
 		case MESG_RESPONSE_EVENT_ID:
@@ -1006,7 +1005,11 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 					ant_infop->first[chan] = 0;
 				}
 				if (p_data->last.hr.seq != newseq && !p_data->first) {
-					proto_tree_add_item(dtree, hf_ant_r_r_time, tvb, offset, 2, ENC_LITTLE_ENDIAN);
+                    proto_tree_add_uint_format_value(dtree, hf_ant_r_r_time, tvb, RR_OFFSET+ext, 2, newrr,
+                                               "%d (old: %d -> R-R HR: %.1f)",
+                                               newrr,
+                                               p_data->last.hr.rr,
+                                               60.0*1024.0/(newrr-p_data->last.hr.rr));
 				} else {
 					NANTITEM(dtree, hf_ant_pd_rr, 2);
 				}
@@ -1055,20 +1058,20 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 						nm = tdiff/(rdiff*32.0);
 						rpm = rdiff*122880.0/pdiff;
 						watts = rpm*nm*2*M_PI/60;
-						proto_tree_add_item(dtree, hf_ant_nm, tvb, offset, 1, nm);
 
-						proto_tree_add_uint_format_value(dtree, hf_ant_r1, tvb, offset, 1, hf_ant_r1,
+                        proto_tree_add_uint_format_value(dtree, hf_ant_r1, tvb, R1_OFFSET+ext, 1, newr1,
 							"%d (old %d diff %d)", newr1, p_data->last.power.r1, rdiff);
-						proto_tree_add_uint_format_value(dtree, hf_ant_r2, tvb, offset, 1, hf_ant_r2,
+                        proto_tree_add_uint_format_value(dtree, hf_ant_r2, tvb, R2_OFFSET+ext, 1, newr2,
 							"%d (old %d diff %d)", newr2, p_data->last.power.r2, rdiff);
-						proto_tree_add_uint_format_value(dtree, hf_ant_n, tvb, offset, 1, hf_ant_n,
+                        proto_tree_add_uint_format_value(dtree, hf_ant_n, tvb, N_OFFSET+ext, 1, newn,
 							"%d (old %d diff %d)", newn, p_data->last.power.n, ndiff);
-						proto_tree_add_uint_format_value(dtree, hf_ant_p, tvb, offset, 2, hf_ant_p,
+                        proto_tree_add_uint_format_value(dtree, hf_ant_p, tvb, P_OFFSET+ext, 2, newp,
 							"%d (old %d diff %d)", newp, p_data->last.power.p, pdiff);
-						proto_tree_add_uint_format_value(dtree, hf_ant_t, tvb, offset, 2, hf_ant_t,
+                        proto_tree_add_uint_format_value(dtree, hf_ant_t, tvb, T_OFFSET+ext, 2, newt,
 							"%d (old %d diff %d)", newt, p_data->last.power.t, tdiff);
-						proto_tree_add_float(dtree, hf_ant_rpm, tvb, offset, 1, rpm);
-						proto_tree_add_float(dtree, hf_ant_watts, tvb, offset, 1, watts);
+                        proto_tree_add_none_format(dtree, hf_ant_nm, tvb, offset, 0, "Nm: %.2f (tdiff/(rdiff*32)", nm);
+                        proto_tree_add_none_format(dtree, hf_ant_rpm, tvb, offset, 0, "Rpm: %.2f (rdiff*122880/pdiff)", rpm);
+                        proto_tree_add_none_format(dtree, hf_ant_watts, tvb, offset, 0, "Watts: %.2f (rpm*nm*2pi/60)", watts);
 					} else {
 						ANTITEM(dtree, hf_ant_r1, 1);
 						ANTITEM(dtree, hf_ant_r2, 1);
@@ -1096,7 +1099,7 @@ dissect_ant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 					batt = (tvb_get_guint8(tvb, offset+1)&0x0f);
 					batt += tvb_get_guint8(tvb, offset)/256.0;
 					/* FIXME: bitmask output doesn't match data */
-					proto_tree_add_uint_format_value(dtree, hf_ant_batt, tvb, offset, 2, hf_ant_batt, "%.2fV", batt);
+                    proto_tree_add_uint_format_value(dtree, hf_ant_batt, tvb, offset, 2, 0, "%.2fV", batt);
 					break;
 				default:
 					ANTITEM(dtree, hf_ant_data_data, len-1);
@@ -1798,12 +1801,12 @@ proto_register_ant(void)
                     { "Network","ant.network", FT_STRING, BASE_NONE, NULL, 0, "", HFILL }
                 },
 	      /* Generated from convert_proto_tree_add_text.pl */
-      { &hf_ant_network_key, { "Network key", "ant.network_key", FT_UINT64, BASE_DEC, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_network_key, { "Network key", "ant.network_key", FT_UINT64, BASE_HEX, NULL, 0, NULL, HFILL }},
       { &hf_ant_r_r_time, { "R-R time", "ant.r_r_time", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
       { &hf_ant_r1_r2, { "r1 %d %d r2 %d %d n %d %d p %d %d t %d %d", "ant.r1_r2", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
-      { &hf_ant_nm, { "Nm", "ant.nm", FT_FLOAT, BASE_NONE, NULL, 0x0, NULL, HFILL }},
-      { &hf_ant_rpm, { "RPM", "ant.rpm", FT_FLOAT, BASE_NONE, NULL, 0x0, NULL, HFILL }},
-      { &hf_ant_watts, { "Watts", "ant.watts", FT_FLOAT, BASE_NONE, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_nm, { "Nm", "ant.nm", FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_rpm, { "RPM", "ant.rpm", FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }},
+      { &hf_ant_watts, { "Watts", "ant.watts", FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }},
 	};
 
 	static gint *ett[] = {
